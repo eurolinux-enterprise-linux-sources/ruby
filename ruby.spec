@@ -18,7 +18,7 @@
 
 Name:		ruby
 Version:	%{rubyver}%{?dotpatchlevel}
-Release:	3%{?dist}
+Release:	4%{?dist}
 License:	Ruby or GPLv2
 URL:		http://www.ruby-lang.org/
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -115,6 +115,10 @@ Patch60: ruby-2.0.0-p594-CVE-2014-8080-REXML-billion-laughs-attack.patch
 # CVE-2014-8090: REXML incomplete fix for CVE-2014-8080.
 # https://bugzilla.redhat.com/show_bug.cgi?id=1159927
 Patch61: ruby-2.0.0-p598-CVE-2014-8090-REXML-incomplete-fix-for-CVE-2014-8080.patch
+
+# DNS Resolv broken when resolv.conf has option ndots > 1
+# https://bugzilla.redhat.com/show_bug.cgi?id=1132704
+Patch62: ruby-2.0.0-p607-DNS-Resolv-fall-back-if-canonicalization-fails.patch
 
 
 
@@ -261,6 +265,7 @@ pushd %{name}-%{arcver}
 %patch59 -p1
 %patch60
 %patch61
+%patch62 -p1
 %patch100 -p1
 %patch300 -p1
 %patch301 -p1
@@ -662,6 +667,10 @@ rm -rf $RPM_BUILD_ROOT
 %doc tmp-ruby-docs/ruby-libs/*
 
 %changelog
+* Mon Feb 16 2015 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-4
+- Fix broken DNS Resolv when resolv.conf has option ndots > 1.
+  Resolves: rhbz#1193067
+
 * Sun Nov 16 2014 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-3
 - Fix REXML billion laughs attack via parameter entity expansion
   (CVE-2014-8080).
