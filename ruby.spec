@@ -1,6 +1,6 @@
 %global	rubyxver	1.8
 %global	rubyver		1.8.7
-%global	_patchlevel	352
+%global	_patchlevel	374
 
 %global	dotpatchlevel	%{?_patchlevel:.%{_patchlevel}}
 %global	patchlevel	%{?_patchlevel:-p%{_patchlevel}}
@@ -18,7 +18,7 @@
 
 Name:		ruby
 Version:	%{rubyver}%{?dotpatchlevel}
-Release:	13%{?dist}
+Release:	2%{?dist}
 License:	Ruby or GPLv2
 URL:		http://www.ruby-lang.org/
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -79,43 +79,8 @@ Patch40:	ruby-readline-TERM-dumb.patch
 # bug 722887
 Patch34:	ruby-1.8.7-p352-path-uniq.patch
 
-# Avoid segfault on PowerPC64.
-Patch41:	ruby-ppc64-segv-fix.patch
-
 # Ignore a minor gdbm-related failure.
 Patch42:	ruby-skip-gdbm-test.patch
-
-# Memory corruption in BigDecimal on 64bit platforms.
-Patch45:	ruby-1.8.7-CVE-2011-0188.patch
-
-# MD5 makes ruby interpreter crash in FIPS mode.
-Patch46:	ruby-1.8.7-FIPS.patch
-
-# mkconfig.rb: fix for continued lines.
-# http://redmine.ruby-lang.org/issues/5189
-Patch47:	ruby-1.8.7-p352-mkconfig.rb-fix-for-continued-lines.patch
-
-# DoS (excessive CPU use) via hash meet-in-the-middle attacks (oCERT-2011-003).
-Patch48:	ruby-1.8.7-p352-CVE-2011-4815.patch
-
-# Segmentation fault during Marshal.load.
-# http://bugs.ruby-lang.org/issues/4339
-Patch49:	ruby-1.8.7-p358-marshal-load-segv-fix.patch
-
-# Entity expansion DoS vulnerability in REXML
-# bug 914716
-Patch50:	ruby-2.0.0-entity-expansion-DoS-vulnerability-in-REXML.patch
-# Fix regression introduced by original patch for 914716
-# https://bugs.ruby-lang.org/issues/7961
-Patch51:	ruby-2.0.0-add-missing-rexml-require.patch
-
-# $SAFE escaping vulnerability about Exception#to_s / NameError#to_s
-# CVE-2012-4481
-Patch52:	ruby-1.8.7-p371-CVE-2012-4481.patch
-
-# hostname check bypassing vulnerability in SSL client.
-# CVE-2013-4073
-Patch53:	ruby-1.8.7-p374-CVE-2013-4073-fix-hostname-verification.patch
 
 # Fix regression introduced by CVE-2013-4073
 # https://bugs.ruby-lang.org/issues/8575
@@ -127,6 +92,21 @@ Patch55:	ruby-1.9.3-p222-generate-1024-bits-RSA-key-instead-of-512-bits.patch
 
 # CVE-2013-4164: Heap Overflow in Floating Point Parsing
 Patch56:	ruby-1.9.3-p484-CVE-2013-4164-ignore-too-long-fraction-part-which-does-not-affect-the-result.patch
+
+# Fix build against OpenSSL with enabled ECC curves.
+# https://bugs.ruby-lang.org/issues/8384
+Patch57:        ruby-1.9.3-p482-Fix-build-against-OpenSSL-with-enabled-ECC-curves.patch
+
+# Exclude test that fails when issuing a certificate with RSA signature and
+# DSS1 digest for earlier OpenSSL versions when used in conjunction with
+# OpenSSL 1.0.1.
+# https://bugs.ruby-lang.org/issues/6089
+Patch58:        ruby-1.9.3-p172-Exclude-failing-tests-written-for-earlier-OpenSSL.patch
+
+# Replace hardcoded MD5 by sha256 to prevent SSL server failure in FIPS mode
+# (rhbz#802946).
+# http://bugs.ruby-lang.org/issues/6137
+Patch59:        ruby-1.8.7-p374-Replace-md5-by-sha256-to-fix-SSL-server-FIPS-compatibility.patch
 
 Patch100:	ruby-1.8.7-lib-paths.patch
 
@@ -262,20 +242,13 @@ pushd %{name}-%{arcver}
 %patch33 -p1
 %patch34 -p1
 %patch40 -p1
-%patch41 -p1
 %patch42 -p1
-%patch45 -p1
-%patch46 -p1
-%patch47 -p1
-%patch48 -p0
-%patch49 -p0
-%patch50 -p1
-%patch51 -p0
-%patch52 -p0
-%patch53 -p0
 %patch54 -p0
 %patch55
 %patch56
+%patch57 -p1
+%patch58 -p1
+%patch59 -p1
 %patch100 -p1
 %patch300 -p1
 %patch301 -p1
@@ -290,12 +263,6 @@ autoconf
 
 rb_cv_func_strtod=no
 export rb_cv_func_strtod
-
-# This workarounds rhbz#997886 until proper fix is acknowledged by PM.
-sed -i "/OPENSSL_NO_EC/ i\
-  #define OPENSSL_NO_EC" ext/openssl/ossl_pkey_ec.c
-sed -i "/#endif \/\* NO_EC \*\// a\
-  #undef OPENSSL_NO_EC" ext/openssl/ossl_pkey_ec.c
 
 # bug 489990
 CFLAGS="$RPM_OPT_FLAGS -fno-strict-aliasing"
@@ -683,13 +650,43 @@ rm -rf $RPM_BUILD_ROOT
 %doc tmp-ruby-docs/ruby-libs/*
 
 %changelog
+* Tue Aug 12 2014 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-2
+- Replace hardcoded MD5 by sha256 to prevent SSL server failure in FIPS mode.
+  * ruby-1.8.7-p374-Replace-md5-by-sha256-to-fix-SSL-server-FIPS-compatibility.patch
+- Resolves: rhbz#802946
+
+
+* Fri May 09 2014 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-1
+- Update to Ruby 1.8.7-p374.
+  * Remove Patch41: ruby-ppc64-segv-fix.patch; subsumed
+  * Remove Patch45: ruby-1.8.7-CVE-2011-0188.patch; subsumed
+  * Remove Patch46: ruby-1.8.7-FIPS.patch; subsumed
+  * Remove Patch47: ruby-1.8.7-p352-mkconfig.rb-fix-for-continued-lines.patch; subsumed
+  * Remove Patch48: ruby-1.8.7-p352-CVE-2011-4815.patch; subsumed
+  * Remove Patch49: ruby-1.8.7-p358-marshal-load-segv-fix.patch; subsumed
+  * Remove Patch50: ruby-2.0.0-entity-expansion-DoS-vulnerability-in-REXML.patch; subsumed
+  * Remove Patch51: ruby-2.0.0-add-missing-rexml-require.patch; subsumed
+  * Remove Patch52: ruby-1.8.7-p371-CVE-2012-4481.patch; subsumed
+  * Remove Patch53: ruby-1.8.7-p374-CVE-2013-4073-fix-hostname-verification.patch; subsumed
+  Resolves: rhbz#830098
+- Enable ECC support, provided by OpenSSL, in Ruby
+  * ruby-1.9.3-p482-Fix-build-against-OpenSSL-with-enabled-ECC-curves.patch
+  Resolves: rhbz#1033864
+- Exclude test that fails when issuing a certificate with RSA signature and
+  DSS1 digest for earlier OpenSSL versions when used in conjunction with
+  OpenSSL 1.0.1.
+  * ruby-1.9.3-p172-Exclude-failing-tests-written-for-earlier-OpenSSL.patch
+  Resolves: rhbz#1034351
+- Rename Tracer.fire to SystemTap.fire to avoid conflict with Ruby's tracer.
+  Resolves: rhbz#784766
+
 * Fri Nov 22 2013 Vít Ondruch <vondruch@redhat.com> - 1.8.7.352-13
 - Workaround build issues against OpenSSL with enabled ECC curves.
 - Make DRb compatible with OpenSSL 1.0.1.
   * ruby-1.9.3-p222-generate-1024-bits-RSA-key-instead-of-512-bits.patch
 - Fix CVE-2013-4164 Heap Overflow in Floating Point Parsing
   * ruby-1.9.3-p484-CVE-2013-4164-ignore-too-long-fraction-part-which-does-not-affect-the-result.patch
-  - Resolves: rhbz#1033500
+  - Resolves: rhbz#1033502
 
 * Mon Jul 08 2013 Vít Ondruch <vondruch@redhat.com> - 1.8.7.352-12
 - Fix regression introduced by CVE-2013-4073

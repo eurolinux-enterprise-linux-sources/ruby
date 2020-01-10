@@ -1,3 +1,206 @@
+Thu Jun 27 20:55:23 2013  URABE Shyouhei  <shyouhei@ruby-lang.org>
+
+	* test/openssl/test_ssl.rb: Oops, sorry!
+
+Thu Jun 27 20:21:18 2013  URABE Shyouhei  <shyouhei@ruby-lang.org>
+
+	* ext/openssl/lib/openssl/ssl-internal.rb (OpenSSL::SSL#verify_certificate_identity):
+	  fix hostname verification. Patch by nahi.
+
+	* test/openssl/test_ssl.rb (OpenSSL#test_verify_certificate_identity):
+	  test for above.
+
+Sat May 18 23:34:50 2013  Kouhei Sutou  <kou@cozmixng.org>
+
+	* lib/rexml/document.rb: move entity_expansion_text_limit accessor to ...
+	* lib/rexml/rexml.rb: ... here to make rexml/text independent from
+	  REXML::Document. It causes circular require.
+	* lib/rexml/document.rb (REXML::Document.entity_expansion_text_limit):
+	  deprecated.
+	* lib/rexml/document.rb (REXML::Document.entity_expansion_text_limit=):
+	  deprecated.
+	* lib/rexml/text.rb: add missing require "rexml/rexml" for
+	  REXML.entity_expansion_text_limit.
+	  Reported by Robert Ulejczyk. Thanks!!! [ruby-core:52895] [Bug #7961]
+
+Sat May 18 23:34:50 2013  Aaron Patterson <aaron@tenderlovemaking.com>
+
+	* lib/rexml/document.rb (REXML::Document.entity_expansion_text_limit):
+	  new attribute to read/write entity expansion text limit.  the default
+	  limit is 10Kb.
+
+	* lib/rexml/text.rb (REXML::Text.unnormalize): check above attribute.
+
+Fri Oct 12 12:25:15 2012  URABE Shyouhei  <shyouhei@ruby-lang.org>
+
+	* error.c (name_err_to_s): we need not infect msg.
+
+	* test/ruby/test_exception.rb (TestException#test_exception_to_s_should_not_propagate_untrustedness): test for it.
+
+Fri Jun 29 21:26:05 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval.c (stack_extend): prevent ALLOCA_N, which reserves a memory
+	  space with for restoring machine stack stored in each threads, from
+	  optimization out.  backport r34278 from the trunk.
+
+Mon Jun 18 18:32:43 2012  Martin Bosslet  <Martin.Bosslet@googlemail.com>
+
+	* backport r32609 from trunk.
+
+	* ext/openssl/ossl_hmac.c: Revert checking return type of
+	  HMAC_Init_ex as it is not compatible with OpenSSL < 1.0.0.
+
+Mon Jun 18 18:32:43 2012  Martin Bosslet  <Martin.Bosslet@googlemail.com>
+
+	* backport r32606 from trunk.
+
+	* ext/openssl/ossl_digest.c: Check return value of EVP_DigestInit_ex.
+	* ext/openssl/ossl_hmac.c: Check return value of HMAC_Init_ex.
+	  Thanks, Jared Jennings, for the patch.
+	  [ Ruby 1.9 - Bug #4944 ] [ruby-core:37670]
+
+Sun Jun 10 03:00:21 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval.c (ruby_setjmp): need to save the stack after r2 (the Table
+	  of Contents on ppc64) is saved onto the stack by getcontext().
+	  based on <https://bugzilla.redhat.com/show_bug.cgi?id=628715>.
+	  Bug#4411
+
+Thu Jun  7 19:00:35 2012  Kenta Murata <mrkn@mrkn.jp>
+
+	* ext/bigdecimal/bigdecimal.c (VpMemAlloc): Fixes a bug reported
+	  by Drew Yao <ayao at apple.com>
+
+Wed Jun  6 15:09:00 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval.c (rb_thread_join), ext/thread/thread.c (wake_one): adjusts
+	  targets of rest waiting threads to join.  [ruby-core:23457]
+
+Wed Jun  6 14:44:13 2012  Kenta Murata  <mrkn@mrkn.jp>
+
+	* bignum.c (rb_big2dbl), test/ruby/test_bignum.rb (test_to_f):
+	  A negative Bignum out of Float range should be converted to -Infinity.
+	  [ruby-core:30492] [Bug #3362]
+
+Wed Jun  6 14:06:02 2012  Tanaka Akira  <akr@fsij.org>
+
+	* lib/webrick/utils.rb: fix fcntl call.
+
+	* lib/drb/unix.rb: ditto.
+
+Mon May 21 16:29:47 2012  Akinori MUSHA  <knu@iDaemons.org>
+
+	* ext/syslog/syslog.c (mSyslog_inspect): Make sure self is a
+	  module before calling rb_class2name().
+
+Fri May 11 14:09:48 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/bigdecimal/bigdecimal.c (PUSH): to prevent VALUE from GC,
+	  must not cast it to unsigned long, which may be shorter than
+	  VALUE, and the result can be mere garbage.
+
+Sat Apr 14 18:51:41 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* bignum.c (rb_big2str0): prevent working clone from
+	  GC. [exerb-dev:0578].  patched by MURASE Masamitsu
+	  <masamitsu.murase AT gmail.com> at [exerb-dev:0580]
+
+Fri Mar  2 11:44:33 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* marshal.c (mark_dump_arg): mark destination string.  patch by
+	  Vit Ondruch.  [Bug #4339]
+
+	* marshal.c (clear_dump_arg, clear_load_arg): clean up also data
+	  tables as same as symbols tables.
+
+Fri Mar  2 11:44:33 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* marshal.c (struct {dump,load}_arg): manage with dfree, instead
+	  of using local variable which may be moved by context switch.
+	  [ruby-dev:39425]
+
+Wed Feb  8 14:06:59 2012  Hiroshi Nakamura  <nahi@ruby-lang.org>
+
+	* ext/openssl/ossl_ssl.c: Add SSL constants and allow to unset SSL
+	  option to prevent BEAST attack. See [Bug #5353].
+
+	  In OpenSSL, OP_DONT_INSERT_EMPTY_FRAGMENTS is used to prevent
+	  TLS-CBC-IV vulunerability described at
+	  http://www.openssl.org/~bodo/tls-cbc.txt
+	  It's known issue of TLSv1/SSLv3 but it attracts lots of attention
+	  these days as BEAST attack. (CVE-2011-3389)
+
+	  Until now ossl sets OP_ALL at SSLContext allocation and call
+	  SSL_CTX_set_options at connection.  SSL_CTX_set_options updates the
+	  value by using |= so bits set by OP_ALL cannot be unset afterwards.
+
+	  This commit changes to call SSL_CTX_set_options only 1 time for each
+	  SSLContext. It sets the specified value if SSLContext#options= are
+	  called and sets OP_ALL if not.
+
+	  To help users to unset bits in OP_ALL, this commit also adds several
+	  constant to SSL such as
+	  OpenSSL::SSL::OP_DONT_INSERT_EMPTY_FRAGMENTS.  These constants were
+	  not exposed in Ruby because there's no way to unset bits in OP_ALL
+	  before.
+
+	  Following is an example to enable 0/n split for BEAST prevention.
+
+	    ctx.options = OP_ALL & ~OP_DONT_INSERT_EMPTY_FRAGMENTS
+
+	* test/openssl/test_ssl.rb: Test above option exists.
+
+Wed Dec 28 21:34:23 2011  URABE Shyouhei  <shyouhei@ruby-lang.org>
+
+	* string.c (rb_str_hash): randomize hash to avoid algorithmic
+	  complexity attacks. CVE-2011-4815
+
+	* st.c (strhash): ditto.
+
+	* string.c (Init_String): initialization of hash_seed to be at the
+	  beginning of the process.
+
+	* st.c (Init_st): ditto.
+
+Thu Dec  8 11:57:04 2011  Tanaka Akira  <akr@fsij.org>
+
+	* inits.c (rb_call_inits): call Init_RandomSeed at first.
+
+	* random.c (seed_initialized): defined.
+	  (fill_random_seed): extracted from random_seed.
+	  (make_seed_value): extracted from random_seed.
+	  (rb_f_rand): initialize random seed at first.
+	  (initial_seed): defined.
+	  (Init_RandomSeed): defined.
+	  (Init_RandomSeed2): defined.
+	  (rb_reset_random_seed): defined.
+	  (Init_Random): call Init_RandomSeed2.
+
+Sat Dec 10 20:44:23 2011  Tanaka Akira  <akr@fsij.org>
+
+	* lib/securerandom.rb: call OpenSSL::Random.seed at the
+	  SecureRandom.random_bytes call.
+	  insert separators for array join.
+	  patch by Masahiro Tomita.  [ruby-dev:44270]
+
+Mon Oct 17 04:20:22 2011  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* mkconfig.rb: fix for continued lines.  based on a patch from
+	  Marcus Rueckert <darix AT opensu.se> at [ruby-core:20420].
+
+Mon Oct 17 04:19:39 2011  Yukihiro Matsumoto  <matz@ruby-lang.org>
+
+	* numeric.c (flo_cmp): Infinity is greater than any bignum
+	  number.  [ruby-dev:38672]
+
+	* bignum.c (rb_big_cmp): ditto.
+
+Mon Oct 17 03:56:12 2011  Yusuke Endoh  <mame@tsg.ne.jp>
+
+	* ext/openssl/ossl_x509store.c (ossl_x509store_initialize): initialize
+	  store->ex_data.sk.  [ruby-core:28907] [ruby-core:23971]
+	  [ruby-core:18121]
+
 Thu Jun 30 12:52:56 2011  WATANABE Hirofumi  <eban@ruby-lang.org>
 
 	* ext/tk/extconf.rb (intptr_t, uintptr_t): support for the latest ActiveTcl with mingw.
@@ -80,7 +283,7 @@ Thu Jun  2 18:28:58 2011  URABE Shyouhei  <shyouhei@ruby-lang.org>
 Mon May 30 10:58:17 2011  Hiroshi Nakamura  <nahi@ruby-lang.org>
 
 	* lib/logger.rb (Logger::ProgName): do not depend on subversion
-	  keyword ($Id: ChangeLog 32320 2011-06-30 03:53:30Z shyouhei $). ProgName with revision number was written in the
+	  keyword ($Id: ChangeLog 41678 2013-06-27 11:56:26Z shyouhei $). ProgName with revision number was written in the
 	  header line of each logfile for ease of tracking what version user
 	  is using in troubleshooting.  Logger is already stable enough.
 

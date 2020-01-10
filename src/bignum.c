@@ -3,7 +3,7 @@
   bignum.c -
 
   $Author: shyouhei $
-  $Date: 2010-06-08 17:42:55 +0900 (Tue, 08 Jun 2010) $
+  $Date: 2012-06-06 14:47:45 +0900 (Wed, 06 Jun 2012) $
   created at: Fri Jun 10 00:48:55 JST 1994
 
   Copyright (C) 1993-2003 Yukihiro Matsumoto
@@ -772,7 +772,7 @@ rb_big2str0(x, base, trim)
     int base;
     int trim;
 {
-    volatile VALUE t;
+    VALUE t;
     BDIGIT *ds;
     long i, j, hbase;
     VALUE ss;
@@ -847,6 +847,7 @@ rb_big2str0(x, base, trim)
 	    if (trim && i == 0 && num == 0) break;
 	}
     }
+    RB_GC_GUARD(t);
     if (trim) {while (s[j] == '0') j++;}
     i = RSTRING(ss)->len - j;
     if (RBIGNUM(x)->sign) {
@@ -1068,7 +1069,10 @@ rb_big2dbl(x)
 
     if (isinf(d)) {
 	rb_warn("Bignum out of Float range");
-	d = HUGE_VAL;
+	if (d < 0.0)
+	    d = -HUGE_VAL;
+	else
+	    d = HUGE_VAL;
     }
     return d;
 }
@@ -1114,7 +1118,15 @@ rb_big_cmp(x, y)
 	break;
 
       case T_FLOAT:
-	return rb_dbl_cmp(rb_big2dbl(x), RFLOAT(y)->value);
+	{
+	    double a = RFLOAT_VALUE(y);
+
+	    if (isinf(a)) {
+		if (a > 0.0) return INT2FIX(-1);
+		else return INT2FIX(1);
+	    }
+	    return rb_dbl_cmp(rb_big2dbl(x), a);
+	}
 
       default:
 	return rb_num_coerce_cmp(x, y);

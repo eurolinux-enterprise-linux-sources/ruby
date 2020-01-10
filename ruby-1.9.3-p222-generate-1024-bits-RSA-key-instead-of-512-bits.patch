@@ -2,10 +2,10 @@ Index: ChangeLog
 ===================================================================
 --- ChangeLog	(revision 35715)
 +++ ChangeLog	(revision 35716)
-@@ -49,6 +49,14 @@
- 	* error.c (name_err_to_s): we need not infect msg.
+@@ -109,6 +109,14 @@
  
- 	* test/ruby/test_exception.rb (TestException#test_exception_to_s_should_not_propagate_untrustedness): test for it.
+ 	* ext/syslog/syslog.c (mSyslog_inspect): Make sure self is a
+ 	  module before calling rb_class2name().
 +
 +Sat May 19 14:42:20 2012  Tanaka Akira  <akr@fsij.org>
 +
@@ -15,7 +15,7 @@ Index: ChangeLog
 +	  reported by Bohuslav Kabrda.
 +	  [ruby-core:43844] [ruby-trunk - Bug #6221]
  
- Fri Mar  2 11:44:33 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+ Fri May 11 14:09:48 2012  Nobuyoshi Nakada  <nobu@ruby-lang.org>
  
 Index: lib/drb/ssl.rb
 ===================================================================

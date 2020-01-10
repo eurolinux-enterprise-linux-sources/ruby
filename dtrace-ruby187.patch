@@ -387,7 +387,7 @@ index e8705e7..64a20af 100644
  void Init_var_tables _((void));
  void Init_version _((void));
  void Init_st _((void));
-+void Init_Tracer _((void));
++void Init_SystemTap _((void));
  
  void
  rb_call_inits()
@@ -395,7 +395,7 @@ index e8705e7..64a20af 100644
      Init_Enumerator();
      Init_marshal();
      Init_version();
-+    Init_Tracer();
++    Init_SystemTap();
  }
 diff --git a/object.c b/object.c
 index 9802d4d..e6b4fb7 100644
@@ -444,17 +444,17 @@ new file mode 100644
 index 0000000..2e9e091
 --- /dev/null
 +++ b/tracer.c
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,66 @@
 +#include "ruby.h"
 +
 +#ifdef ENABLE_DTRACE
 +#include "dtrace.h"
 +#endif
 +
-+VALUE rb_mDtrace;
++VALUE rb_mSystemTap;
 +
 +static VALUE
-+ruby_dtrace_fire(argc, argv, klass)
++ruby_systemtap_fire(argc, argv, klass)
 +  int argc;
 +  VALUE *argv;
 +  VALUE klass;
@@ -503,10 +503,12 @@ index 0000000..2e9e091
 +}
 +
 +
-+void Init_Tracer()
++void Init_SystemTap()
 +{
-+	rb_mDtrace = rb_define_module("Tracer");
-+	rb_define_module_function(rb_mDtrace, "fire", ruby_dtrace_fire, -1);
++	rb_mSystemTap = rb_define_module("SystemTap");
++	rb_define_module_function(rb_mSystemTap, "fire", ruby_systemtap_fire, -1);
++
++	rb_define_global_const("DTrace", rb_mSystemTap);
 +}
 +
 
