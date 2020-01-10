@@ -18,7 +18,7 @@
 
 Name:		ruby
 Version:	%{rubyver}%{?dotpatchlevel}
-Release:	4%{?dist}
+Release:	5%{?dist}
 License:	Ruby or GPLv2
 URL:		http://www.ruby-lang.org/
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -119,6 +119,10 @@ Patch61: ruby-2.0.0-p598-CVE-2014-8090-REXML-incomplete-fix-for-CVE-2014-8080.pa
 # DNS Resolv broken when resolv.conf has option ndots > 1
 # https://bugzilla.redhat.com/show_bug.cgi?id=1132704
 Patch62: ruby-2.0.0-p607-DNS-Resolv-fall-back-if-canonicalization-fails.patch
+
+# Prevent Resolv::DNS from returning truncated dns replies.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1331086
+Patch63: ruby-1.9.3-p0-lib-resolv.rb-retry-via-TCP-if-UDP-reply-is-truncate.patch
 
 
 
@@ -266,6 +270,7 @@ pushd %{name}-%{arcver}
 %patch60
 %patch61
 %patch62 -p1
+%patch63
 %patch100 -p1
 %patch300 -p1
 %patch301 -p1
@@ -667,16 +672,20 @@ rm -rf $RPM_BUILD_ROOT
 %doc tmp-ruby-docs/ruby-libs/*
 
 %changelog
+* Wed Sep 21 2016 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-5
+- Prevent Resolv::DNS from returning truncated dns replies.
+  Resolves: rhbz#1331086
+
 * Mon Feb 16 2015 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-4
 - Fix broken DNS Resolv when resolv.conf has option ndots > 1.
-  Resolves: rhbz#1193067
+  Resolves: rhbz#1132704
 
 * Sun Nov 16 2014 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-3
 - Fix REXML billion laughs attack via parameter entity expansion
   (CVE-2014-8080).
-  Resolves: rhbz#1163993
+  Resolves: rhbz#1163994
 - REXML incomplete fix for CVE-2014-8080 (CVE-2014-8090).
-  Resolves: rhbz#1163993
+  Resolves: rhbz#1163994
 
 * Tue Aug 12 2014 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-2
 - Replace hardcoded MD5 by sha256 to prevent SSL server failure in FIPS mode.
