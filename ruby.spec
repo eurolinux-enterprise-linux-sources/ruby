@@ -18,7 +18,7 @@
 
 Name:		ruby
 Version:	%{rubyver}%{?dotpatchlevel}
-Release:	2%{?dist}
+Release:	3%{?dist}
 License:	Ruby or GPLv2
 URL:		http://www.ruby-lang.org/
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -107,6 +107,16 @@ Patch58:        ruby-1.9.3-p172-Exclude-failing-tests-written-for-earlier-OpenSS
 # (rhbz#802946).
 # http://bugs.ruby-lang.org/issues/6137
 Patch59:        ruby-1.8.7-p374-Replace-md5-by-sha256-to-fix-SSL-server-FIPS-compatibility.patch
+
+# CVE-2014-8080: Fix REXML billion laughs attack via parameter entity expansion.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1157709
+Patch60: ruby-2.0.0-p594-CVE-2014-8080-REXML-billion-laughs-attack.patch
+
+# CVE-2014-8090: REXML incomplete fix for CVE-2014-8080.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1159927
+Patch61: ruby-2.0.0-p598-CVE-2014-8090-REXML-incomplete-fix-for-CVE-2014-8080.patch
+
+
 
 Patch100:	ruby-1.8.7-lib-paths.patch
 
@@ -249,6 +259,8 @@ pushd %{name}-%{arcver}
 %patch57 -p1
 %patch58 -p1
 %patch59 -p1
+%patch60
+%patch61
 %patch100 -p1
 %patch300 -p1
 %patch301 -p1
@@ -650,6 +662,13 @@ rm -rf $RPM_BUILD_ROOT
 %doc tmp-ruby-docs/ruby-libs/*
 
 %changelog
+* Sun Nov 16 2014 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-3
+- Fix REXML billion laughs attack via parameter entity expansion
+  (CVE-2014-8080).
+  Resolves: rhbz#1163993
+- REXML incomplete fix for CVE-2014-8080 (CVE-2014-8090).
+  Resolves: rhbz#1163993
+
 * Tue Aug 12 2014 Vít Ondruch <vondruch@redhat.com> - 1.8.7.374-2
 - Replace hardcoded MD5 by sha256 to prevent SSL server failure in FIPS mode.
   * ruby-1.8.7-p374-Replace-md5-by-sha256-to-fix-SSL-server-FIPS-compatibility.patch
