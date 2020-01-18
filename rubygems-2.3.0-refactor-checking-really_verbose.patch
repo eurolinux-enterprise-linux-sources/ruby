@@ -1,0 +1,219 @@
+From 75821c744f0bfda185eac35b91810254bf9e2367 Mon Sep 17 00:00:00 2001
+From: Aaron Patterson <aaron.patterson@gmail.com>
+Date: Wed, 5 Feb 2014 16:42:04 -0800
+Subject: [PATCH] refactor checking `really_verbose`
+
+This commit tries to reduce the number of places in RubyGems where we
+test `really_verbose`.
+---
+ lib/rubygems/commands/cleanup_command.rb |  4 ++--
+ lib/rubygems/dependency_installer.rb     |  6 +++---
+ lib/rubygems/installer.rb                |  6 +++---
+ lib/rubygems/package.rb                  |  2 +-
+ lib/rubygems/package/old.rb              |  2 +-
+ lib/rubygems/rdoc.rb                     |  2 +-
+ lib/rubygems/remote_fetcher.rb           | 23 ++++++++---------------
+ lib/rubygems/user_interaction.rb         |  8 ++++++++
+ 8 files changed, 27 insertions(+), 26 deletions(-)
+
+diff --git a/lib/rubygems/commands/cleanup_command.rb b/lib/rubygems/commands/cleanup_command.rb
+index c8f0082bfb..69975640fe 100644
+--- a/lib/rubygems/commands/cleanup_command.rb
++++ b/lib/rubygems/commands/cleanup_command.rb
+@@ -66,10 +66,10 @@ def execute
+ 
+     say "Clean Up Complete"
+ 
+-    if Gem.configuration.really_verbose then
++    verbose do
+       skipped = @default_gems.map { |spec| spec.full_name }
+ 
+-      say "Skipped default gems: #{skipped.join ', '}"
++      "Skipped default gems: #{skipped.join ', '}"
+     end
+   end
+ 
+diff --git a/lib/rubygems/dependency_installer.rb b/lib/rubygems/dependency_installer.rb
+index 5644b5ce73..4ea3847b70 100644
+--- a/lib/rubygems/dependency_installer.rb
++++ b/lib/rubygems/dependency_installer.rb
+@@ -165,9 +165,9 @@ def find_gems_with_sources dep, best_only=false # :nodoc:
+         # FIX if there is a problem talking to the network, we either need to always tell
+         # the user (no really_verbose) or fail hard, not silently tell them that we just
+         # couldn't find their requested gem.
+-        if Gem.configuration.really_verbose then
+-          say "Error fetching remote data:\t\t#{e.message}"
+-          say "Falling back to local-only install"
++        verbose do
++          "Error fetching remote data:\t\t#{e.message}\n" \
++            "Falling back to local-only install"
+         end
+         @domain = :local
+       end
+diff --git a/lib/rubygems/installer.rb b/lib/rubygems/installer.rb
+index cbae8234a1..548f1262a8 100644
+--- a/lib/rubygems/installer.rb
++++ b/lib/rubygems/installer.rb
+@@ -357,7 +357,7 @@ def generate_windows_script(filename, bindir)
+         file.puts windows_stub_script(bindir, filename)
+       end
+ 
+-      say script_path if Gem.configuration.really_verbose
++      verbose script_path
+     end
+   end
+ 
+@@ -408,7 +408,7 @@ def generate_bin_script(filename, bindir)
+       file.print app_script_text(filename)
+     end
+ 
+-    say bin_script_path if Gem.configuration.really_verbose
++    verbose bin_script_path
+ 
+     generate_windows_script filename, bindir
+   end
+@@ -694,7 +694,7 @@ def build_extension extension, dest_path # :nodoc:
+             results = builder.build(extension, gem_dir, dest_path,
+                                     results, @build_args)
+ 
+-            say results.join("\n") if Gem.configuration.really_verbose
++            verbose { results.join("\n") }
+           end
+         end
+       rescue
+diff --git a/lib/rubygems/package.rb b/lib/rubygems/package.rb
+index ae20f22b94..417b34b79f 100644
+--- a/lib/rubygems/package.rb
++++ b/lib/rubygems/package.rb
+@@ -338,7 +338,7 @@ def extract_tar_gz io, destination_dir, pattern = "*" # :nodoc:
+           out.write entry.read
+         end
+ 
+-        say destination if Gem.configuration.really_verbose
++        verbose destination
+       end
+     end
+   end
+diff --git a/lib/rubygems/package/old.rb b/lib/rubygems/package/old.rb
+index 30c30c0201..c47210d2a0 100644
+--- a/lib/rubygems/package/old.rb
++++ b/lib/rubygems/package/old.rb
+@@ -83,7 +83,7 @@ def extract_files destination_dir
+           out.write file_data
+         end
+ 
+-        say destination if Gem.configuration.really_verbose
++        verbose destination
+       end
+     end
+   rescue Zlib::DataError
+diff --git a/lib/rubygems/rdoc.rb b/lib/rubygems/rdoc.rb
+index 633bd893a5..394e502051 100644
+--- a/lib/rubygems/rdoc.rb
++++ b/lib/rubygems/rdoc.rb
+@@ -263,7 +263,7 @@ def legacy_rdoc *args
+       Gem::Requirement.new('>= 2.4.0') =~ self.class.rdoc_version
+ 
+     r = new_rdoc
+-    say "rdoc #{args.join ' '}" if Gem.configuration.really_verbose
++    verbose { "rdoc #{args.join ' '}" }
+ 
+     Dir.chdir @spec.full_gem_path do
+       begin
+diff --git a/lib/rubygems/remote_fetcher.rb b/lib/rubygems/remote_fetcher.rb
+index 2490c69556..9df48bf6f3 100644
+--- a/lib/rubygems/remote_fetcher.rb
++++ b/lib/rubygems/remote_fetcher.rb
+@@ -168,8 +168,7 @@ def download(spec, source_uri, install_dir = Gem.dir)
+     when 'http', 'https' then
+       unless File.exist? local_gem_path then
+         begin
+-          say "Downloading gem #{gem_file_name}" if
+-            Gem.configuration.really_verbose
++          verbose "Downloading gem #{gem_file_name}"
+ 
+           remote_gem_path = source_uri + "gems/#{gem_file_name}"
+ 
+@@ -179,8 +178,7 @@ def download(spec, source_uri, install_dir = Gem.dir)
+ 
+           alternate_name = "#{spec.original_name}.gem"
+ 
+-          say "Failed, downloading gem #{alternate_name}" if
+-            Gem.configuration.really_verbose
++          verbose "Failed, downloading gem #{alternate_name}"
+ 
+           remote_gem_path = source_uri + "gems/#{alternate_name}"
+ 
+@@ -199,8 +197,7 @@ def download(spec, source_uri, install_dir = Gem.dir)
+         local_gem_path = source_uri.to_s
+       end
+ 
+-      say "Using local gem #{local_gem_path}" if
+-        Gem.configuration.really_verbose
++      verbose "Using local gem #{local_gem_path}"
+     when nil then # TODO test for local overriding cache
+       source_path = if Gem.win_platform? && source_uri.scheme &&
+                        !source_uri.path.include?(':') then
+@@ -218,8 +215,7 @@ def download(spec, source_uri, install_dir = Gem.dir)
+         local_gem_path = source_uri.to_s
+       end
+ 
+-      say "Using local gem #{local_gem_path}" if
+-        Gem.configuration.really_verbose
++      verbose "Using local gem #{local_gem_path}"
+     else
+       raise ArgumentError, "unsupported URI scheme #{source_uri.scheme}"
+     end
+@@ -506,8 +502,7 @@ def fetch
+     begin
+       @requests[connection.object_id] += 1
+ 
+-      say "#{request.method} #{uri}" if
+-        Gem.configuration.really_verbose
++      verbose "#{request.method} #{uri}"
+ 
+       file_name = File.basename(uri.path)
+       # perform download progress reporter only for gems
+@@ -536,11 +531,10 @@ def fetch
+         response = connection.request request
+       end
+ 
+-      say "#{response.code} #{response.message}" if
+-        Gem.configuration.really_verbose
++      verbose "#{response.code} #{response.message}"
+ 
+     rescue Net::HTTPBadResponse
+-      say "bad response" if Gem.configuration.really_verbose
++      verbose "bad response"
+ 
+       reset connection
+ 
+@@ -555,8 +549,7 @@ def fetch
+            Errno::ECONNABORTED, Errno::ECONNRESET, Errno::EPIPE
+ 
+       requests = @requests[connection.object_id]
+-      say "connection reset after #{requests} requests, retrying" if
+-        Gem.configuration.really_verbose
++      verbose "connection reset after #{requests} requests, retrying"
+ 
+       raise FetchError.new('too many connection resets', uri) if retried
+ 
+diff --git a/lib/rubygems/user_interaction.rb b/lib/rubygems/user_interaction.rb
+index f5e460f994..42ab6e2c24 100644
+--- a/lib/rubygems/user_interaction.rb
++++ b/lib/rubygems/user_interaction.rb
+@@ -119,6 +119,14 @@ def say statement = ''
+   def terminate_interaction(*args)
+     ui.terminate_interaction(*args)
+   end
++
++  ##
++  # Calls +say+ with +msg+ or the results of the block if really_verbose
++  # is true.
++
++  def verbose msg = nil
++    say(msg || yield) if Gem.configuration.really_verbose
++  end
+ end
+ 
+ ##

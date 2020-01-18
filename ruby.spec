@@ -26,7 +26,7 @@
 %endif
 
 
-%global release 34
+%global release 35
 %{!?release_string:%global release_string %{?development_release:0.}%{release}%{?development_release:.%{development_release}}%{?dist}}
 
 %global rubygems_version 2.0.14.1
@@ -246,6 +246,25 @@ Patch49: ruby-2.5.1-TestTimeTZ-test-failures-Kiritimati-and-Lisbon.patch
 # https://github.com/ruby/openssl/commit/f653cfa43f0f20e8c440122ea982382b6228e7f5
 # https://github.com/ruby/ruby/commit/93bc10272734cbbb9197470ca629cc4ea019f6f0
 Patch50: ruby-2.5.3-fix-openssl-x509-name.patch
+# Refresh expired certificates.
+# https://bugs.ruby-lang.org/issues/15502
+Patch63: ruby-2.6.0-Try-to-update-cert.patch
+# Introduce `Gem::UserInteraction#verbose` method as precondition
+# to fix CVE-2019-8321.
+# https://github.com/rubygems/rubygems/commit/75821c744f0bfda185eac35b91810254bf9e2367
+Patch66: rubygems-2.3.0-refactor-checking-really_verbose.patch
+# CVE-2019-8321: Escape sequence injection vulnerability in verbose
+# https://bugzilla.redhat.com/show_bug.cgi?id=1692514
+# CVE-2019-8322: Escape sequence injection vulnerability in gem owner
+# https://bugzilla.redhat.com/show_bug.cgi?id=1692516
+# CVE-2019-8323: Escape sequence injection vulnerability in API response handling
+# https://bugzilla.redhat.com/show_bug.cgi?id=1692519
+# CVE-2019-8324: Installing a malicious gem may lead to arbitrary code execution
+# https://bugzilla.redhat.com/show_bug.cgi?id=1692520
+# CVE-2019-8325: Escape sequence injection vulnerability in errors
+# https://bugzilla.redhat.com/show_bug.cgi?id=1692522
+# https://github.com/ruby/ruby/commit/f86e5daee790ee509cb17f4f51f95cc76ca89a4e
+Patch67: ruby-2.4.6-Applied-security-patches-for-RubyGems.patch
 
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Requires: ruby(rubygems) >= %{rubygems_version}
@@ -538,6 +557,9 @@ Tcl/Tk interface for the object-oriented scripting language Ruby.
 %patch48 -p1
 %patch49 -p1
 %patch50 -p1
+%patch63 -p1
+%patch66 -p1
+%patch67 -p1
 
 # Provide an example of usage of the tapset:
 cp -a %{SOURCE3} .
@@ -1030,6 +1052,21 @@ OPENSSL_ENABLE_MD5_VERIFY=1 make check TESTS="-v $DISABLE_TESTS"
 %{ruby_libdir}/tkextlib
 
 %changelog
+* Thu Apr 04 2019 Vít Ondruch <vondruch@redhat.com> - 2.0.0.648-35
+- Introduce `Gem::UserInteraction#verbose` method as precondition to fix
+  CVE-2019-8321.
+  * rubygems-2.3.0-refactor-checking-really_verbose.patch
+- Fix escape sequence injection vulnerability in verbose.
+- Fix escape sequence injection vulnerability in gem owner.
+- Fix escape sequence injection vulnerability in API response handling.
+- Prohibit arbitrary code execution when installing a malicious gem.
+- Fix escape sequence injection vulnerability in errors.
+  * ruby-2.4.6-Applied-security-patches-for-RubyGems.patch
+  Resolves: rhbz#1699283
+
+* Mon Feb 04 2019 Jun Aruga <jaruga@redhat.com> - 2.0.0.648-35
+- Refresh expired certificates.
+
 * Thu Nov 01 2018 Jun Aruga <jaruga@redhat.com> - 2.0.0.648-34
 - CVE-2018-16395: Fix OpenSSL::X509::Name equality check does not work.
   Resolves: CVE-2018-16395
