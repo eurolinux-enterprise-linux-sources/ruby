@@ -26,7 +26,7 @@
 %endif
 
 
-%global release 33
+%global release 34
 %{!?release_string:%global release_string %{?development_release:0.}%{release}%{?development_release:.%{development_release}}%{?dist}}
 
 %global rubygems_version 2.0.14.1
@@ -238,6 +238,14 @@ Patch47: ruby-2.1.0-Adding-Psych.safe_load.patch
 # Recent tzdata change breaks Ruby test suite.
 # https://bugs.ruby-lang.org/issues/14438
 Patch48: ruby-2.5.0-Disable-Tokyo-TZ-tests.patch
+# TestTimeTZ test failures Kiritimati and Lisbon
+# https://bugs.ruby-lang.org/issues/14655
+Patch49: ruby-2.5.1-TestTimeTZ-test-failures-Kiritimati-and-Lisbon.patch
+# CVE-2018-16395: Fix OpenSSL::X509::Name equality check does not work.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1643086
+# https://github.com/ruby/openssl/commit/f653cfa43f0f20e8c440122ea982382b6228e7f5
+# https://github.com/ruby/ruby/commit/93bc10272734cbbb9197470ca629cc4ea019f6f0
+Patch50: ruby-2.5.3-fix-openssl-x509-name.patch
 
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 Requires: ruby(rubygems) >= %{rubygems_version}
@@ -528,6 +536,8 @@ Tcl/Tk interface for the object-oriented scripting language Ruby.
 %patch46 -p1
 %patch47 -p1
 %patch48 -p1
+%patch49 -p1
+%patch50 -p1
 
 # Provide an example of usage of the tapset:
 cp -a %{SOURCE3} .
@@ -717,6 +727,10 @@ sed -i "/test_try_/ a\      return;" test/mkmf/test_flags.rb
 # https://bugzilla.redhat.com/show_bug.cgi?id=1428369#c6
 sed -i '/combination(STRINGS, STRINGS) {|str, salt|/i\    strict_crypt = true' \
   test/ruby/test_m17n_comb.rb
+
+# Fix "Could not find 'minitest'" error.
+# http://bugs.ruby-lang.org/issues/9259
+sed -i "/^  gem 'minitest', '~> 4.0'/ s/^/#/" lib/rubygems/test_case.rb
 
 # Allow MD5 in OpenSSL.
 # https://bugs.ruby-lang.org/issues/9154
@@ -1016,6 +1030,10 @@ OPENSSL_ENABLE_MD5_VERIFY=1 make check TESTS="-v $DISABLE_TESTS"
 %{ruby_libdir}/tkextlib
 
 %changelog
+* Thu Nov 01 2018 Jun Aruga <jaruga@redhat.com> - 2.0.0.648-34
+- CVE-2018-16395: Fix OpenSSL::X509::Name equality check does not work.
+  Resolves: CVE-2018-16395
+
 * Mon Feb 19 2018 Vít Ondruch <vondruch@redhat.com> - 2.0.0.648-33
 - Fix always passing WEBrick test.
 
