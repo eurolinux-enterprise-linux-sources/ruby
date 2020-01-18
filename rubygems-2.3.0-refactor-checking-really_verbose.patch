@@ -85,7 +85,7 @@ diff --git a/lib/rubygems/package.rb b/lib/rubygems/package.rb
 index ae20f22b94..417b34b79f 100644
 --- a/lib/rubygems/package.rb
 +++ b/lib/rubygems/package.rb
-@@ -338,7 +338,7 @@ def extract_tar_gz io, destination_dir, pattern = "*" # :nodoc:
+@@ -347,7 +347,7 @@ def extract_tar_gz io, destination_dir, pattern = "*" # :nodoc:
            out.write entry.read
          end
  

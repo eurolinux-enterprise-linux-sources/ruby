@@ -1,0 +1,44 @@
+From 4dd2526cda0056e08a9eb38bac2fb4e837874ea2 Mon Sep 17 00:00:00 2001
+From: usa <usa@b2dd03c8-39d4-4d8f-98ff-823fe69b080e>
+Date: Wed, 28 Mar 2018 10:37:07 +0000
+Subject: [PATCH] pack.c: fix underflow
+
+* pack.c (pack_unpack_internal): get rid of underflow.
+  https://hackerone.com/reports/298246
+
+git-svn-id: svn+ssh://ci.ruby-lang.org/ruby/branches/ruby_2_3@62997 b2dd03c8-39d4-4d8f-98ff-823fe69b080e
+---
+ pack.c                 | 2 +-
+ test/ruby/test_pack.rb | 3 +++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/pack.c b/pack.c
+index 487fdf82fa..d304dd2eea 100644
+--- a/pack.c
++++ b/pack.c
+@@ -1430,7 +1430,7 @@ pack_unpack(VALUE str, VALUE fmt)
+ 	else if (ISDIGIT(*p)) {
+ 	    errno = 0;
+ 	    len = STRTOUL(p, (char**)&p, 10);
+-	    if (errno) {
++	    if (len < 0 || errno) {
+ 		rb_raise(rb_eRangeError, "pack length too big");
+ 	    }
+ 	}
+diff --git a/test/ruby/test_pack.rb b/test/ruby/test_pack.rb
+index f51d0b44e4..8ca34051a9 100644
+--- a/test/ruby/test_pack.rb
++++ b/test/ruby/test_pack.rb
+@@ -471,6 +471,9 @@ class TestPack < Test::Unit::TestCase
+     assert_equal([1, 2], "\x01\x00\x00\x02".unpack("C@3C"))
+     assert_equal([nil], "\x00".unpack("@1C")) # is it OK?
+     assert_raise(ArgumentError) { "\x00".unpack("@2C") }
++
++    pos = (1 << [nil].pack("p").bytesize * 8) - 100 # -100
++    assert_raise(RangeError) {"0123456789".unpack("@#{pos}C10")}
+   end
+ 
+   def test_pack_unpack_percent
+-- 
+2.17.1
+

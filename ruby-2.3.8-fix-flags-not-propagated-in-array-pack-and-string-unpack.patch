@@ -1,0 +1,106 @@
+From 216e73a58ed85014d547cbc89006ff2a987bab1f Mon Sep 17 00:00:00 2001
+From: usa <usa@b2dd03c8-39d4-4d8f-98ff-823fe69b080e>
+Date: Wed, 17 Oct 2018 15:09:24 +0000
+Subject: [PATCH] merge revision(s) 65125:
+
+	infect taint flag on Array#pack and String#unpack
+	with the directives "B", "b", "H" and "h".
+
+		* pack.c (pack_pack, pack_unpack_internal): infect taint flag.
+
+		* test/ruby/test_pack.rb: add test for above.
+
+git-svn-id: svn+ssh://ci.ruby-lang.org/ruby/branches/ruby_2_3@65130 b2dd03c8-39d4-4d8f-98ff-823fe69b080e
+---
+ pack.c                 |  8 ++++++++
+ test/ruby/test_pack.rb | 15 +++++++++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/pack.c b/pack.c
+index d304dd2eea..b64c0f64cb 100644
+--- a/pack.c
++++ b/pack.c
+@@ -944,6 +944,7 @@ pack_pack(VALUE ary, VALUE fmt)
+ 	    StringValue(from);
+ 	    ptr = RSTRING_PTR(from);
+ 	    plen = RSTRING_LEN(from);
++	    OBJ_INFECT(res, from);
+ 
+ 	    if (len == 0 && type == 'm') {
+ 		encodes(res, ptr, plen, type, 0);
+@@ -971,6 +972,7 @@ pack_pack(VALUE ary, VALUE fmt)
+ 
+ 	  case 'M':		/* quoted-printable encoded string */
+ 	    from = rb_obj_as_string(NEXTFROM);
++	    OBJ_INFECT(res, from);
+ 	    if (len <= 1)
+ 		len = 72;
+ 	    qpencode(res, from, len);
+@@ -996,6 +998,8 @@ pack_pack(VALUE ary, VALUE fmt)
+ 		}
+ 		else {
+ 		    t = StringValuePtr(from);
++		    OBJ_INFECT(res, from);
++		    rb_obj_taint(from);
+ 		}
+ 		if (!associates) {
+ 		    associates = rb_ary_new();
+@@ -1487,6 +1491,7 @@ pack_unpack(VALUE str, VALUE fmt)
+ 		    len = (send - s) * 8;
+ 		bits = 0;
+ 		UNPACK_PUSH(bitstr = rb_usascii_str_new(0, len));
++		OBJ_INFECT(bitstr, str);
+ 		t = RSTRING_PTR(bitstr);
+ 		for (i=0; i<len; i++) {
+ 		    if (i & 7) bits >>= 1;
+@@ -1507,6 +1512,7 @@ pack_unpack(VALUE str, VALUE fmt)
+ 		    len = (send - s) * 8;
+ 		bits = 0;
+ 		UNPACK_PUSH(bitstr = rb_usascii_str_new(0, len));
++		OBJ_INFECT(bitstr, str);
+ 		t = RSTRING_PTR(bitstr);
+ 		for (i=0; i<len; i++) {
+ 		    if (i & 7) bits <<= 1;
+@@ -1527,6 +1533,7 @@ pack_unpack(VALUE str, VALUE fmt)
+ 		    len = (send - s) * 2;
+ 		bits = 0;
+ 		UNPACK_PUSH(bitstr = rb_usascii_str_new(0, len));
++		OBJ_INFECT(bitstr, str);
+ 		t = RSTRING_PTR(bitstr);
+ 		for (i=0; i<len; i++) {
+ 		    if (i & 1)
+@@ -1549,6 +1556,7 @@ pack_unpack(VALUE str, VALUE fmt)
+ 		    len = (send - s) * 2;
+ 		bits = 0;
+ 		UNPACK_PUSH(bitstr = rb_usascii_str_new(0, len));
++		OBJ_INFECT(bitstr, str);
+ 		t = RSTRING_PTR(bitstr);
+ 		for (i=0; i<len; i++) {
+ 		    if (i & 1)
+diff --git a/test/ruby/test_pack.rb b/test/ruby/test_pack.rb
+index 8ca34051a9..9bf1f1b064 100644
+--- a/test/ruby/test_pack.rb
++++ b/test/ruby/test_pack.rb
+@@ -709,4 +709,19 @@ EXPECTED
+     $VERBOSE = verbose
+   end
+ 
++  def test_pack_infection
++    tainted_array_string = ["123456"]
++    tainted_array_string.first.taint
++    ['a', 'A', 'Z', 'B', 'b', 'H', 'h', 'u', 'M', 'm', 'P', 'p'].each do |f|
++      assert_predicate(tainted_array_string.pack(f), :tainted?)
++    end
++  end
++
++  def test_unpack_infection
++    tainted_string = "123456"
++    tainted_string.taint
++    ['a', 'A', 'Z', 'B', 'b', 'H', 'h', 'u', 'M', 'm'].each do |f|
++      assert_predicate(tainted_string.unpack(f).first, :tainted?)
++    end
++  end
+ end
+-- 
+2.17.1
+

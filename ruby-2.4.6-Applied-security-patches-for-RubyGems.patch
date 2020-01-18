@@ -90,7 +90,7 @@ index 2ee7f84462c1..7842a322cfce 100644
      end
  
      with_response response do |resp|
--      owners = YAML.load resp.body
+-      owners = Gem::SafeYAML.load resp.body
 +      owners = Gem::SafeYAML.load clean_text(resp.body)
  
        say "Owners for gem: #{name}"

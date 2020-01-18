@@ -1,0 +1,16 @@
+diff --git a/test/rubygems/test_gem_package.rb b/test/rubygems/test_gem_package.rb
+index 29e2ce86b1..54ba245b32 100644
+--- a/test/rubygems/test_gem_package.rb
++++ b/test/rubygems/test_gem_package.rb
+@@ -608,7 +608,7 @@ class TestGemPackage < Gem::Package::TarTestCase
+         bogus_data = Gem.gzip 'hello'
+         fake_signer = Class.new do
+           def digest_name; 'SHA512'; end
+-          def digest_algorithm; Digest(:SHA512); end
++          def digest_algorithm; OpenSSL::Digest::SHA512; end
+           def key; 'key'; end
+           def sign(*); 'fake_sig'; end
+         end
+-- 
+2.17.1
+

@@ -26,7 +26,7 @@
 %endif
 
 
-%global release 35
+%global release 36
 %{!?release_string:%global release_string %{?development_release:0.}%{release}%{?development_release:.%{development_release}}%{?dist}}
 
 %global rubygems_version 2.0.14.1
@@ -246,9 +246,72 @@ Patch49: ruby-2.5.1-TestTimeTZ-test-failures-Kiritimati-and-Lisbon.patch
 # https://github.com/ruby/openssl/commit/f653cfa43f0f20e8c440122ea982382b6228e7f5
 # https://github.com/ruby/ruby/commit/93bc10272734cbbb9197470ca629cc4ea019f6f0
 Patch50: ruby-2.5.3-fix-openssl-x509-name.patch
+# CVE-2018-8778: Fix buffer under-read in String#unpack
+# https://bugzilla.redhat.com/show_bug.cgi?id=1561953
+# https://github.com/ruby/ruby/commit/b9121fe7602a560c4fee9ab353a7f57a3988ec73
+Patch51: ruby-2.3.8-pack.c-fix-underflow.patch
+# CVE-2017-17742: Fix HTTP response splitting in WEBrick
+# https://bugzilla.redhat.com/show_bug.cgi?id=1561952
+# https://github.com/ruby/ruby/commit/bbda1a027475bf7ce5e1a9583a7b55d0be71c8fe
+Patch52: ruby-2.2.10-webrick-prevent-response.patch
+# CVE-2018-8777: Fix DoS by large request in WEBrick
+# https://bugzilla.redhat.com/show_bug.cgi?id=1561950
+# https://github.com/ruby/ruby/commit/a45622669bb1ff18d3ee9b411128acd839c4263e
+Patch53: ruby-2-2.10-webrick-avoid-large-request.patch
+# Fix tests for Ruby 2.0 compatibility.
+Patch54: ruby-2-2.10-webrick-avoid-large-request-fix-tests.patch
+# CVE-2018-8780: Fix directory traversal by poisoned NULL byte in Dir.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1561949
+# https://github.com/ruby/ruby/commit/143eb22f1877815dd802f7928959c5f93d4c7bb3
+Patch55: ruby-2.2.10-fix-dir.c-check-nul-bytes.patch
+# CVE-2018-6914: Fix file and directory creation with directory traversal.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1561947
+# https://github.com/ruby/ruby/commit/e9ddf2ba41a0bffe1047e33576affd48808c5d0b
+Patch56: ruby-2.2.10-ignore-file-separator-from-tmp-file-dir-name.patch
+# Fix tests for Ruby 2.0 compatibility.
+Patch57: ruby-2.2.10-ignore-file-separator-from-tmp-file-dir-name-tests.patch
+# CVE-2018-8779: Fix socket creation by poisoned NULL byte.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1561948
+# https://github.com/ruby/ruby/commit/47165eed264d357e78e27371cfef20d5c2bde5d9
+Patch58: ruby-2.2.10-fix-socket-creation-by_null-byte.patch
+# CVE-2018-16396: Fix flags not propagated in Array#pack and String#unpack.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1643089
+# https://github.com/ruby/ruby/commit/b18c513e24dad5f464701a4ad49ac699f435bbbe
+Patch59: ruby-2.3.8-fix-flags-not-propagated-in-array-pack-and-string-unpack.patch
+# CVE-2018-1000075: Strictly interpret octal fields in tar headers.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1547420
+# CVE-2018-1000076: Raise a security error for duplicate files in a package.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1547421
+# CVE-2018-1000077: Enforce URL validation on spec homepage attribute.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1547422
+# CVE-2018-1000078: Mitigate XSS vulnerability in homepage attribute.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1547425
+# CVE-2018-1000079: Prevent Path Traversal issue during gem installation.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1547426
+# https://github.com/ruby/ruby/commit/664b94fd2b4b19edd7d75c6bbcd3154905b2624e
+Patch60: ruby-2.2.10-rubygems-2.7.6-multiple-vulnerabilities.patch
+# Fix test modified by ruby-2.2.10-rubygems-2.7.6-multiple-vulnerabilities.patch
+# Change testing digest class from Digest to OpenSSL::Digest::SHA512,
+# because when for current logic, the digest class does not have name method,
+# lib/rubygems/package/tar_writer.rb#add_file_digest raises an error.
+# Upstream changed the logic on Ruby 2.1.0 by
+# https://github.com/ruby/ruby/commit/269503b544247b5b3e30dbe60a0bab4f2ca00e4e
+Patch61: ruby-2.2.10-rubygems-2.7.6-multiple-vulnerabilities-tests.patch
+# CVE-2018-1000074: Fix Unsafe Object Deserialization Vulnerability in gem owner.
+# https://bugzilla.redhat.com/show_bug.cgi?id=1547419
+# https://github.com/ruby/ruby/commit/08fb5c2153deaee53e481ebe3602fe1d59e256c7
+# https://github.com/rubygems/rubygems/commit/254e3d0ee873c008c0b74e8b8abcbdab4caa0a6d
+Patch62: ruby-2.3.8-rubygems-2.7.6-fix-unsafe-object-deserialization.patch
 # Refresh expired certificates.
 # https://bugs.ruby-lang.org/issues/15502
 Patch63: ruby-2.6.0-Try-to-update-cert.patch
+# CVE-2018-1000073: Path traversal when writing to a symlinked basedir outside
+# of the root
+# https://bugzilla.redhat.com/show_bug.cgi?id=1547418
+# https://github.com/rubygems/rubygems/commit/1b931fc03b819b9a0214be3eaca844ef534175e2
+Patch64: ruby-2.3.8-rubygems-2.7.6-install-location-deducing-symlinked-base-dirs.patch
+# https://github.com/rubygems/rubygems/commit/666ef793cad42eed96f7aee1cdf77865db921099
+Patch65: ruby-2.3.8-rubygems-2.7.6-a-safe-mkdir-to-verify-inside-destination-dir.patch
 # Introduce `Gem::UserInteraction#verbose` method as precondition
 # to fix CVE-2019-8321.
 # https://github.com/rubygems/rubygems/commit/75821c744f0bfda185eac35b91810254bf9e2367
@@ -557,7 +620,21 @@ Tcl/Tk interface for the object-oriented scripting language Ruby.
 %patch48 -p1
 %patch49 -p1
 %patch50 -p1
+%patch51 -p1
+%patch52 -p1
+%patch53 -p1
+%patch54 -p1
+%patch55 -p1
+%patch56 -p1
+%patch57 -p1
+%patch58 -p1
+%patch59 -p1
+%patch60 -p1
+%patch61 -p1
+%patch62 -p1
 %patch63 -p1
+%patch64 -p1
+%patch65 -p1
 %patch66 -p1
 %patch67 -p1
 
@@ -612,6 +689,20 @@ install -m644 %{SOURCE7} %{buildroot}%{_includedir}/%{name}/config.h
 # Version is empty if --with-ruby-version is specified.
 # http://bugs.ruby-lang.org/issues/7807
 sed -i 's/Version: \${ruby_version}/Version: %{ruby_version}/' %{buildroot}%{_libdir}/pkgconfig/%{name}.pc
+
+# Kill bundled certificates, as they should be part of ca-certificates.
+for cert in \
+  AddTrustExternalCARoot-2048.pem \
+  AddTrustExternalCARoot.pem \
+  Class3PublicPrimaryCertificationAuthority.pem \
+  DigiCertHighAssuranceEVRootCA.pem \
+  EntrustnetSecureServerCertificationAuthority.pem \
+  GeoTrustGlobalCA.pem
+do
+  rm %{buildroot}%{rubygems_dir}/rubygems/ssl_certs/$cert
+done
+# Ensure there is not forgotten any certificate.
+test ! "$(ls -A  %{buildroot}%{rubygems_dir}/rubygems/ssl_certs/ 2>/dev/null)"
 
 # Move macros file insto proper place and replace the %%{name} macro, since it
 # would be wrongly evaluated during build of other packages.
@@ -1052,20 +1143,54 @@ OPENSSL_ENABLE_MD5_VERIFY=1 make check TESTS="-v $DISABLE_TESTS"
 %{ruby_libdir}/tkextlib
 
 %changelog
-* Thu Apr 04 2019 Vít Ondruch <vondruch@redhat.com> - 2.0.0.648-35
+* Thu Apr 04 2019 Vít Ondruch <vondruch@redhat.com> - 2.0.0.648-36
 - Introduce `Gem::UserInteraction#verbose` method as precondition to fix
   CVE-2019-8321.
   * rubygems-2.3.0-refactor-checking-really_verbose.patch
 - Fix escape sequence injection vulnerability in verbose.
 - Fix escape sequence injection vulnerability in gem owner.
+  Resolves: CVE-2019-8322
 - Fix escape sequence injection vulnerability in API response handling.
+  Resolves: CVE-2019-8323
 - Prohibit arbitrary code execution when installing a malicious gem.
+  Resolves: CVE-2019-8324
 - Fix escape sequence injection vulnerability in errors.
+  Resolves: CVE-2019-8325
   * ruby-2.4.6-Applied-security-patches-for-RubyGems.patch
-  Resolves: rhbz#1699283
 
 * Mon Feb 04 2019 Jun Aruga <jaruga@redhat.com> - 2.0.0.648-35
+- Kill bundled certificates.
+- Add macros to edit files lists in .gemspec
+- Fix buffer under-read in String#unpack
+  Resolves: CVE-2018-8778
+- Fix HTTP response splitting in WEBrick
+  Resolves: CVE-2017-17742
+- Fix DoS by large request in WEBrick
+  Resolves: CVE-2018-8777
+- Fix directory traversal by poisoned NULL byte in Dir.
+  Resolves: CVE-2018-8780
+- Fix file and directory creation with directory traversal.
+  Resolves: CVE-2018-6914
+- Fix socket creation by poisoned NULL byte.
+  Resolves: CVE-2018-8779
+- Fix: return default path with nonexistent home dir
+- Fix flags not propagated in Array#pack and String#unpack.
+  Resolves: CVE-2018-16396
+- Fix strictly interpret octal fields in tar headers.
+  Resolves: CVE-2018-1000075
+- Fix a security error for duplicate files in a package.
+  Resolves: CVE-2018-1000076
+- Enforce URL validation on spec homepage attribute.
+  Resolves: CVE-2018-1000077
+- Mitigate XSS vulnerability in homepage attribute.
+  Resolves: CVE-2018-1000078
+- Prevent Path Traversal issue during gem installation.
+  Resolves: CVE-2018-1000079
+- Fix unsafe Object Deserialization Vulnerability in gem owner.
+  Resolves: CVE-2018-1000074
 - Refresh expired certificates.
+- Fix path traversal when writing to a symlinked basedir outside of the root
+  Resolves: CVE-2018-1000073
 
 * Thu Nov 01 2018 Jun Aruga <jaruga@redhat.com> - 2.0.0.648-34
 - CVE-2018-16395: Fix OpenSSL::X509::Name equality check does not work.

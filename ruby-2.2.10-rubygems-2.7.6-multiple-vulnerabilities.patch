@@ -1,0 +1,493 @@
+From d6f00c288f84523eec263455ff5bfc631bc27188 Mon Sep 17 00:00:00 2001
+From: usa <usa@b2dd03c8-39d4-4d8f-98ff-823fe69b080e>
+Date: Fri, 16 Feb 2018 16:27:56 +0000
+Subject: [PATCH] merge revision(s) 58471,58493,62436: [Backport #13505]
+
+	load.c: backtrace of circular require
+
+	* load.c (load_lock): print backtrace of circular require via
+	  `Warning.warn` [ruby-core:80850] [Bug #13505]
+
+	  Send the backtrace of the circular require warning as a single String to Warning.warn
+
+	* load.c: send as a single string.
+	* error.c: expose the string formatted by rb_warning as rb_warning_string().
+	* test/ruby/test_exception.rb: update tests.
+	  [ruby-core:80850] [Bug #13505]
+
+	fix regexp literal warning.
+
+	* test/rubygems/test_gem_server.rb: eliminate duplicated character class warning.
+	  [Bug #14481]
+
+git-svn-id: svn+ssh://ci.ruby-lang.org/ruby/branches/ruby_2_2@62441 b2dd03c8-39d4-4d8f-98ff-823fe69b080e
+---
+ lib/rubygems/package.rb                      |   6 +-
+ lib/rubygems/package/tar_header.rb           |  23 ++-
+ lib/rubygems/package/tar_writer.rb           |   2 +
+ lib/rubygems/server.rb                       |  14 +-
+ lib/rubygems/specification.rb                |  15 +-
+ test/rubygems/test_gem_package.rb            |  49 +++++-
+ test/rubygems/test_gem_package_tar_header.rb |  21 +++
+ test/rubygems/test_gem_server.rb             | 165 +++++++++++++++++++
+ test/rubygems/test_gem_specification.rb      |  17 +-
+ 9 files changed, 295 insertions(+), 17 deletions(-)
+
+diff --git a/lib/rubygems/package.rb b/lib/rubygems/package.rb
+index c2bbda9b05..9ed5b2c9ed 100644
+--- a/lib/rubygems/package.rb
++++ b/lib/rubygems/package.rb
+@@ -374,7 +374,7 @@ EOM
+     destination = File.expand_path destination
+ 
+     raise Gem::Package::PathError.new(destination, destination_dir) unless
+-      destination.start_with? destination_dir
++      destination.start_with? destination_dir + '/'
+ 
+     destination.untaint
+     destination
+@@ -541,6 +541,10 @@ EOM
+       raise Gem::Package::FormatError.new \
+               'package content (data.tar.gz) is missing', @gem
+     end
++
++    if duplicates = @files.group_by {|f| f }.select {|k,v| v.size > 1 }.map(&:first) and duplicates.any?
++      raise Gem::Security::Exception, "duplicate files in the package: (#{duplicates.map(&:inspect).join(', ')})"
++    end
+   end
+ 
+   ##
+diff --git a/lib/rubygems/package/tar_header.rb b/lib/rubygems/package/tar_header.rb
+index 28da1db0b5..7d75ff5d46 100644
+--- a/lib/rubygems/package/tar_header.rb
++++ b/lib/rubygems/package/tar_header.rb
+@@ -103,25 +103,30 @@ class Gem::Package::TarHeader
+     fields = header.unpack UNPACK_FORMAT
+ 
+     new :name     => fields.shift,
+-        :mode     => fields.shift.oct,
+-        :uid      => fields.shift.oct,
+-        :gid      => fields.shift.oct,
+-        :size     => fields.shift.oct,
+-        :mtime    => fields.shift.oct,
+-        :checksum => fields.shift.oct,
++        :mode     => strict_oct(fields.shift),
++        :uid      => strict_oct(fields.shift),
++        :gid      => strict_oct(fields.shift),
++        :size     => strict_oct(fields.shift),
++        :mtime    => strict_oct(fields.shift),
++        :checksum => strict_oct(fields.shift),
+         :typeflag => fields.shift,
+         :linkname => fields.shift,
+         :magic    => fields.shift,
+-        :version  => fields.shift.oct,
++        :version  => strict_oct(fields.shift),
+         :uname    => fields.shift,
+         :gname    => fields.shift,
+-        :devmajor => fields.shift.oct,
+-        :devminor => fields.shift.oct,
++        :devmajor => strict_oct(fields.shift),
++        :devminor => strict_oct(fields.shift),
+         :prefix   => fields.shift,
+ 
+         :empty => empty
+   end
+ 
++  def self.strict_oct(str)
++    return str.oct if str =~ /\A[0-7]*\z/
++    raise ArgumentError, "#{str.inspect} is not an octal string"
++  end
++
+   ##
+   # Creates a new TarHeader using +vals+
+ 
+diff --git a/lib/rubygems/package/tar_writer.rb b/lib/rubygems/package/tar_writer.rb
+index f2c11e3544..0fbc1770fb 100644
+--- a/lib/rubygems/package/tar_writer.rb
++++ b/lib/rubygems/package/tar_writer.rb
+@@ -176,6 +176,8 @@ class Gem::Package::TarWriter
+       digest.name == signer.digest_name
+     end
+ 
++    raise "no #{signer.digest_name} in #{digests.values.compact}" unless signature_digest
++
+     signature = signer.sign signature_digest.digest
+ 
+     add_file_simple "#{name}.sig", 0444, signature.length do |io|
+diff --git a/lib/rubygems/server.rb b/lib/rubygems/server.rb
+index f2d1428489..af1448e79c 100644
+--- a/lib/rubygems/server.rb
++++ b/lib/rubygems/server.rb
+@@ -595,6 +595,18 @@ div.method-source-code pre { color: #ffdead; overflow: hidden; }
+       executables = nil if executables.empty?
+       executables.last["is_last"] = true if executables
+ 
++      # Pre-process spec homepage for safety reasons
++      begin
++        homepage_uri = URI.parse(spec.homepage)
++        if [URI::HTTP, URI::HTTPS].member? homepage_uri.class
++          homepage_uri = spec.homepage
++        else
++          homepage_uri = "."
++        end
++      rescue URI::InvalidURIError
++        homepage_uri = "."
++      end
++
+       specs << {
+         "authors"             => spec.authors.sort.join(", "),
+         "date"                => spec.date.to_s,
+@@ -604,7 +616,7 @@ div.method-source-code pre { color: #ffdead; overflow: hidden; }
+         "only_one_executable" => (executables && executables.size == 1),
+         "full_name"           => spec.full_name,
+         "has_deps"            => !deps.empty?,
+-        "homepage"            => spec.homepage,
++        "homepage"            => homepage_uri,
+         "name"                => spec.name,
+         "rdoc_installed"      => Gem::RDoc.new(spec).rdoc_installed?,
+         "ri_installed"        => Gem::RDoc.new(spec).ri_installed?,
+diff --git a/lib/rubygems/specification.rb b/lib/rubygems/specification.rb
+index c3e39b4759..d04c08b828 100644
+--- a/lib/rubygems/specification.rb
++++ b/lib/rubygems/specification.rb
+@@ -9,6 +9,7 @@ require 'rubygems/version'
+ require 'rubygems/requirement'
+ require 'rubygems/platform'
+ require 'rubygems/deprecate'
++require 'uri'
+ 
+ # :stopdoc:
+ # date.rb can't be loaded for `make install` due to miniruby
+@@ -2503,10 +2504,16 @@ class Gem::Specification
+       raise Gem::InvalidSpecificationException, "#{lazy} is not a summary"
+     end
+ 
+-    if homepage and not homepage.empty? and
+-       homepage !~ /\A[a-z][a-z\d+.-]*:/i then
+-      raise Gem::InvalidSpecificationException,
+-            "\"#{homepage}\" is not a URI"
++    # Make sure a homepage is valid HTTP/HTTPS URI
++    if homepage and not homepage.empty?
++      begin
++        homepage_uri = URI.parse(homepage)
++        unless [URI::HTTP, URI::HTTPS].member? homepage_uri.class
++          raise Gem::InvalidSpecificationException, "\"#{homepage}\" is not a valid HTTP URI"
++        end
++      rescue URI::InvalidURIError
++        raise Gem::InvalidSpecificationException, "\"#{homepage}\" is not a valid HTTP URI"
++      end
+     end
+ 
+     # Warnings
+diff --git a/test/rubygems/test_gem_package.rb b/test/rubygems/test_gem_package.rb
+index c77fc47ada..29e2ce86b1 100644
+--- a/test/rubygems/test_gem_package.rb
++++ b/test/rubygems/test_gem_package.rb
+@@ -360,6 +360,21 @@ class TestGemPackage < Gem::Package::TarTestCase
+                  "#{@destination} is not allowed", e.message)
+   end
+ 
++  def test_install_location_suffix
++    package = Gem::Package.new @gem
++
++    filename = "../#{File.basename(@destination)}suffix.rb"
++
++    e = assert_raises Gem::Package::PathError do
++      package.install_location filename, @destination
++    end
++
++    parent = File.expand_path File.join @destination, filename
++
++    assert_equal("installing into parent path #{parent} of " +
++                 "#{@destination} is not allowed", e.message)
++  end
++
+   def test_load_spec
+     entry = StringIO.new Gem.gzip @spec.to_yaml
+     def entry.full_name() 'metadata.gz' end
+@@ -514,6 +529,32 @@ class TestGemPackage < Gem::Package::TarTestCase
+     assert_match %r%nonexistent.gem$%,           e.message
+   end
+ 
++  def test_verify_duplicate_file
++    FileUtils.mkdir_p 'lib'
++    FileUtils.touch 'lib/code.rb'
++
++    build = Gem::Package.new @gem
++    build.spec = @spec
++    build.setup_signer
++    open @gem, 'wb' do |gem_io|
++      Gem::Package::TarWriter.new gem_io do |gem|
++        build.add_metadata gem
++        build.add_contents gem
++
++        gem.add_file_simple 'a.sig', 0444, 0
++        gem.add_file_simple 'a.sig', 0444, 0
++      end
++    end
++
++    package = Gem::Package.new @gem
++
++    e = assert_raises Gem::Security::Exception do
++      package.verify
++    end
++
++    assert_equal 'duplicate files in the package: ("a.sig")', e.message
++  end
++
+   def test_verify_security_policy
+     package = Gem::Package.new @gem
+     package.security_policy = Gem::Security::HighSecurity
+@@ -565,7 +606,13 @@ class TestGemPackage < Gem::Package::TarTestCase
+ 
+         # write bogus data.tar.gz to foil signature
+         bogus_data = Gem.gzip 'hello'
+-        gem.add_file_simple 'data.tar.gz', 0444, bogus_data.length do |io|
++        fake_signer = Class.new do
++          def digest_name; 'SHA512'; end
++          def digest_algorithm; Digest(:SHA512); end
++          def key; 'key'; end
++          def sign(*); 'fake_sig'; end
++        end
++        gem.add_file_signed 'data2.tar.gz', 0444, fake_signer.new do |io|
+           io.write bogus_data
+         end
+ 
+diff --git a/test/rubygems/test_gem_package_tar_header.rb b/test/rubygems/test_gem_package_tar_header.rb
+index 5d855435ec..ee30d4afd6 100644
+--- a/test/rubygems/test_gem_package_tar_header.rb
++++ b/test/rubygems/test_gem_package_tar_header.rb
+@@ -126,5 +126,26 @@ group\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000
+     assert_equal '012467', @tar_header.checksum
+   end
+ 
++  def test_from_bad_octal
++    test_cases = [
++      "00000006,44\000", # bogus character
++      "00000006789\000", # non-octal digit
++      "+0000001234\000", # positive sign
++      "-0000001000\000", # negative sign
++      "0x000123abc\000", # radix prefix
++    ]
++
++    test_cases.each do |val|
++      header_s = @tar_header.to_s
++      # overwrite the size field
++      header_s[124, 12] = val
++      io = TempIO.new header_s
++      assert_raises ArgumentError do
++        new_header = Gem::Package::TarHeader.from io
++      end
++      io.close! if io.respond_to? :close!
++    end
++  end
++
+ end
+ 
+diff --git a/test/rubygems/test_gem_server.rb b/test/rubygems/test_gem_server.rb
+index bf30399db2..5344ebbe69 100644
+--- a/test/rubygems/test_gem_server.rb
++++ b/test/rubygems/test_gem_server.rb
+@@ -268,6 +268,171 @@ class TestGemServer < Gem::TestCase
+     assert_match 'z 9', @res.body
+   end
+ 
++
++  def test_xss_homepage_fix_289313
++    data = StringIO.new "GET / HTTP/1.0\r\n\r\n"
++    dir = "#{@gemhome}2"
++
++    spec = util_spec 'xsshomepagegem', 1
++    spec.homepage = "javascript:confirm(document.domain)"
++
++    specs_dir = File.join dir, 'specifications'
++    FileUtils.mkdir_p specs_dir
++
++    open File.join(specs_dir, spec.spec_name), 'w' do |io|
++      io.write spec.to_ruby
++    end
++
++    server = Gem::Server.new dir, process_based_port, false
++
++    @req.parse data
++
++    server.root @req, @res
++
++    assert_equal 200, @res.status
++    assert_match 'xsshomepagegem 1', @res.body
++
++    # This verifies that the homepage for this spec is not displayed and is set to ".", because it's not a 
++    # valid HTTP/HTTPS URL and could be unsafe in an HTML context.  We would prefer to throw an exception here,
++    # but spec.homepage is currently free form and not currently required to be a URL, this behavior may be 
++    # validated in future versions of Gem::Specification.
++    #
++    # There are two variant we're checking here, one where rdoc is not present, and one where rdoc is present in the same regex:
++    #
++    # Variant #1 - rdoc not installed
++    #
++    #   <b>xsshomepagegem 1</b>
++    #
++    #
++    #  <span title="rdoc not installed">[rdoc]</span>
++    #
++    #
++    #
++    #  <a href="." title=".">[www]</a>
++    #
++    # Variant #2 - rdoc installed
++    #
++    #   <b>xsshomepagegem 1</b>
++    #
++    #
++    #  <a href="\/doc_root\/xsshomepagegem-1\/">\[rdoc\]<\/a>
++    #
++    #
++    #
++    #  <a href="." title=".">[www]</a>
++    regex_match = /xsshomepagegem 1<\/b>[\s]+(<span title="rdoc not installed">\[rdoc\]<\/span>|<a href="\/doc_root\/xsshomepagegem-1\/">\[rdoc\]<\/a>)[\s]+<a href="\." title="\.">\[www\]<\/a>/
++    assert_match regex_match, @res.body
++  end
++
++  def test_invalid_homepage
++    data = StringIO.new "GET / HTTP/1.0\r\n\r\n"
++    dir = "#{@gemhome}2"
++
++    spec = util_spec 'invalidhomepagegem', 1
++    spec.homepage = "notavalidhomepageurl"
++
++    specs_dir = File.join dir, 'specifications'
++    FileUtils.mkdir_p specs_dir
++
++    open File.join(specs_dir, spec.spec_name), 'w' do |io|
++      io.write spec.to_ruby
++    end
++
++    server = Gem::Server.new dir, process_based_port, false
++
++    @req.parse data
++
++    server.root @req, @res
++
++    assert_equal 200, @res.status
++    assert_match 'invalidhomepagegem 1', @res.body
++
++    # This verifies that the homepage for this spec is not displayed and is set to ".", because it's not a 
++    # valid HTTP/HTTPS URL and could be unsafe in an HTML context.  We would prefer to throw an exception here,
++    # but spec.homepage is currently free form and not currently required to be a URL, this behavior may be 
++    # validated in future versions of Gem::Specification.
++    #
++    # There are two variant we're checking here, one where rdoc is not present, and one where rdoc is present in the same regex:
++    #
++    # Variant #1 - rdoc not installed
++    #
++    #   <b>invalidhomepagegem 1</b>
++    #
++    #
++    #  <span title="rdoc not installed">[rdoc]</span>
++    #
++    #
++    #
++    #  <a href="." title=".">[www]</a>
++    #
++    # Variant #2 - rdoc installed
++    #
++    #   <b>invalidhomepagegem 1</b>
++    #
++    #
++    #  <a href="\/doc_root\/invalidhomepagegem-1\/">\[rdoc\]<\/a>
++    #
++    #
++    #
++    #  <a href="." title=".">[www]</a>
++    regex_match = /invalidhomepagegem 1<\/b>[\s]+(<span title="rdoc not installed">\[rdoc\]<\/span>|<a href="\/doc_root\/invalidhomepagegem-1\/">\[rdoc\]<\/a>)[\s]+<a href="\." title="\.">\[www\]<\/a>/
++    assert_match regex_match, @res.body
++  end
++
++  def test_valid_homepage_http
++    data = StringIO.new "GET / HTTP/1.0\r\n\r\n"
++    dir = "#{@gemhome}2"
++
++    spec = util_spec 'validhomepagegemhttp', 1
++    spec.homepage = "http://rubygems.org"
++
++    specs_dir = File.join dir, 'specifications'
++    FileUtils.mkdir_p specs_dir
++
++    open File.join(specs_dir, spec.spec_name), 'w' do |io|
++      io.write spec.to_ruby
++    end
++
++    server = Gem::Server.new dir, process_based_port, false
++
++    @req.parse data
++
++    server.root @req, @res
++
++    assert_equal 200, @res.status
++    assert_match 'validhomepagegemhttp 1', @res.body
++
++    regex_match = /validhomepagegemhttp 1<\/b>[\s]+(<span title="rdoc not installed">\[rdoc\]<\/span>|<a href="\/doc_root\/validhomepagegemhttp-1\/">\[rdoc\]<\/a>)[\s]+<a href="http:\/\/rubygems\.org" title="http:\/\/rubygems\.org">\[www\]<\/a>/
++    assert_match regex_match, @res.body
++  end
++
++  def test_valid_homepage_https
++    data = StringIO.new "GET / HTTP/1.0\r\n\r\n"
++    dir = "#{@gemhome}2"
++
++    spec = util_spec 'validhomepagegemhttps', 1
++    spec.homepage = "https://rubygems.org"
++
++    specs_dir = File.join dir, 'specifications'
++    FileUtils.mkdir_p specs_dir
++
++    open File.join(specs_dir, spec.spec_name), 'w' do |io|
++      io.write spec.to_ruby
++    end
++
++    server = Gem::Server.new dir, process_based_port, false
++
++    @req.parse data
++
++    server.root @req, @res
++
++    assert_equal 200, @res.status
++    assert_match 'validhomepagegemhttps 1', @res.body
++
++    regex_match = /validhomepagegemhttps 1<\/b>[\s]+(<span title="rdoc not installed">\[rdoc\]<\/span>|<a href="\/doc_root\/validhomepagegemhttps-1\/">\[rdoc\]<\/a>)[\s]+<a href="https:\/\/rubygems\.org" title="https:\/\/rubygems\.org">\[www\]<\/a>/
++    assert_match regex_match, @res.body
++  end
++
+   def test_specs
+     data = StringIO.new "GET /specs.#{Gem.marshal_version} HTTP/1.0\r\n\r\n"
+     @req.parse data
+diff --git a/test/rubygems/test_gem_specification.rb b/test/rubygems/test_gem_specification.rb
+index 85db5356f2..65984675e1 100644
+--- a/test/rubygems/test_gem_specification.rb
++++ b/test/rubygems/test_gem_specification.rb
+@@ -1586,7 +1586,22 @@ end
+         @a1.validate
+       end
+ 
+-      assert_equal '"over at my cool site" is not a URI', e.message
++      assert_equal '"over at my cool site" is not a valid HTTP URI', e.message
++
++      @a1.homepage = 'ftp://rubygems.org'
++
++      e = assert_raises Gem::InvalidSpecificationException do
++        @a1.validate
++      end
++
++      assert_equal '"ftp://rubygems.org" is not a valid HTTP URI', e.message
++
++      @a1.homepage = 'http://rubygems.org'
++      assert_equal true, @a1.validate
++
++      @a1.homepage = 'https://rubygems.org'
++      assert_equal true, @a1.validate
++
+     end
+   end
+ 
+-- 
+2.17.1
+

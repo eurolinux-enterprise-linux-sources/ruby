@@ -1,0 +1,79 @@
+diff --git a/lib/rubygems/package.rb b/lib/rubygems/package.rb
+index 13eb25bd26..9b1cb3a142 100644
+--- a/lib/rubygems/package.rb
++++ b/lib/rubygems/package.rb
+@@ -332,7 +332,16 @@ EOM
+ 
+         FileUtils.rm_rf destination
+ 
+-        FileUtils.mkdir_p File.dirname destination
++        mkdir_options = {}
++        mkdir_options[:mode] = entry.header.mode if entry.directory?
++        mkdir =
++          if entry.directory? then
++            destination
++          else
++            File.dirname destination
++          end
++
++        mkdir_p_safe mkdir, mkdir_options, destination_dir, entry.full_name
+ 
+         open destination, 'wb', entry.header.mode do |out|
+           out.write entry.read
+@@ -367,12 +376,9 @@ EOM
+     raise Gem::Package::PathError.new(filename, destination_dir) if
+       filename.start_with? '/'
+ 
+-    destination_dir = File.realpath destination_dir if
+-      File.respond_to? :realpath
++    destination_dir = realpath destination_dir
+ 
+     destination = File.join destination_dir, filename
+-    destination = File.realpath destination if
+-      File.respond_to? :realpath
+     destination = File.expand_path destination
+ 
+     raise Gem::Package::PathError.new(destination, destination_dir) unless
+@@ -382,6 +388,22 @@ EOM
+     destination
+   end
+ 
++  def mkdir_p_safe mkdir, mkdir_options, destination_dir, file_name
++    destination_dir = realpath File.expand_path(destination_dir)
++    parts = mkdir.split(File::SEPARATOR)
++    parts.reduce do |path, basename|
++      path = realpath path  unless path == ""
++      path = File.expand_path(path + File::SEPARATOR + basename)
++      lstat = File.lstat path rescue nil
++      if !lstat || !lstat.directory?
++        unless path.start_with? destination_dir and (FileUtils.mkdir path, mkdir_options rescue false)
++          raise Gem::Package::PathError.new(file_name, destination_dir)
++        end
++      end
++      path
++    end
++  end
++
+   ##
+   # Loads a Gem::Specification from the TarEntry +entry+
+ 
+@@ -560,6 +582,16 @@ EOM
+     raise Gem::Package::FormatError.new(e.message, entry.full_name)
+   end
+ 
++  if File.respond_to? :realpath
++    def realpath file
++      File.realpath file
++    end
++  else
++    def realpath file
++      file
++    end
++  end
++
+ end
+ 
+ require 'rubygems/package/digest_io'
+-- 
+2.20.1
+

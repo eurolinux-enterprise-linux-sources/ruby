@@ -1,0 +1,44 @@
+diff --git a/test/test_tempfile.rb b/test/test_tempfile.rb
+index b6790a06af..68de345116 100644
+--- a/test/test_tempfile.rb
++++ b/test/test_tempfile.rb
+@@ -320,18 +320,19 @@ puts Tempfile.new('foo').path
+     end
+   end
+ 
+-  def test_create_with_block
++  def test_open_with_block
+     path = nil
+-    Tempfile.create("tempfile-create") {|f|
++    Tempfile.open("tempfile-create") {|f|
+       path = f.path
+       assert(File.exist?(path))
+     }
+-    assert(!File.exist?(path))
++    assert(File.exist?(path))
++    File.unlink path
+   end
+ 
+-  def test_create_without_block
++  def test_open_without_block
+     path = nil
+-    f = Tempfile.create("tempfile-create")
++    f = Tempfile.open("tempfile-create")
+     path = f.path
+     assert(File.exist?(path))
+     f.close
+@@ -360,11 +361,4 @@ puts Tempfile.new('foo').path
+   ensure
+     t.close!
+   end
+-
+-  def test_create_traversal_dir
+-    expect = Dir.glob(TRAVERSAL_PATH + '*').count
+-    Tempfile.create(TRAVERSAL_PATH + 'foo')
+-    actual = Dir.glob(TRAVERSAL_PATH + '*').count
+-    assert_equal expect, actual
+-  end
+ end
+-- 
+2.17.1
+

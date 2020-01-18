@@ -67,6 +67,7 @@ module Gem
     def default_path
       path = default_dirs.collect {|location, paths| paths[:gem_dir]}
       path.unshift Gem.user_dir if File.exist? Gem.user_home
+      path
     end
 
     def default_bindir

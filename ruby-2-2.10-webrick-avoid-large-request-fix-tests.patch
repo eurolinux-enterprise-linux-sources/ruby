@@ -1,0 +1,43 @@
+diff --git a/test/webrick/test_httpauth.rb b/test/webrick/test_httpauth.rb
+index 842668f54e..8bd976c933 100644
+--- a/test/webrick/test_httpauth.rb
++++ b/test/webrick/test_httpauth.rb
+@@ -197,11 +197,11 @@ class TestWEBrickHTTPAuth < Test::Unit::TestCase
+       }
+       assert_equal([], log)
+    }
+-    TestWEBrick.start_httpserver({}, log_tester) {|server, addr, port, log|
++    TestWEBrick.start_httpserver_with_log({}, log_tester) {|server, addr, port, log|
+       realm = "wb auth-int realm"
+       path = "/digest_auth_int"
+ 
+-      Tempfile.create("test_webrick_auth_int") {|tmpfile|
++      Tempfile.open("test_webrick_auth_int") {|tmpfile|
+         tmpfile.close
+         tmp_pass = WEBrick::HTTPAuth::Htdigest.new(tmpfile.path)
+         tmp_pass.set_passwd(realm, "foo", "Hunter2")
+diff --git a/test/webrick/test_httpserver.rb b/test/webrick/test_httpserver.rb
+index f1d58b40f5..594f578d2d 100644
+--- a/test/webrick/test_httpserver.rb
++++ b/test/webrick/test_httpserver.rb
+@@ -372,7 +372,7 @@ class TestWEBrickHTTPServer < Test::Unit::TestCase
+       assert_equal 1, log.size
+       assert log[0].include?('ERROR headers too large')
+     }
+-    TestWEBrick.start_httpserver({}, log_tester){|server, addr, port, log|
++    TestWEBrick.start_httpserver_with_log({}, log_tester){|server, addr, port, log|
+       server.mount('/', WEBrick::HTTPServlet::FileHandler, __FILE__)
+       TCPSocket.open(addr, port) do |c|
+         c.write("GET / HTTP/1.0\r\n")
+@@ -389,7 +389,7 @@ class TestWEBrickHTTPServer < Test::Unit::TestCase
+       assert_equal 1, log.size
+       assert log[0].include?('ERROR bad chunk data size')
+     end
+-    TestWEBrick.start_httpserver({}, log_tester){|server, addr, port, log|
++    TestWEBrick.start_httpserver_with_log({}, log_tester){|server, addr, port, log|
+       server.mount_proc('/', ->(req, res) { res.body = req.body })
+       TCPSocket.open(addr, port) do |c|
+         c.write("POST / HTTP/1.1\r\nHost: example.com\r\n" \
+-- 
+2.17.1
+
